@@ -34,7 +34,7 @@
         }
 
         // Call Render backend API
-        fetch(`https://pass_cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
