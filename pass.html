@@ -60,7 +60,7 @@
                     }
 
                     if (data.bookings.length === 0) {
-                        $('#bookingCard').html(`<div class="card white-card"><h3>No current booking</h3></div>`);
+                        $('#bookingCard').html(`<div class="card white-card"><h3>No bookings found</h3></div>`);
                         return;
                     }
 
@@ -71,20 +71,20 @@
                     const early = new Date(fromTime.getTime() - 15 * 60000);
                     const late = new Date(toTime.getTime() + 15 * 60000);
 
-                    if (now >= early && now <= late) {
-                        $('#bookingCard').html(`
-                            <div class="card green-card">
-                                <h3>Garden & Café Pass Active</h3>
-                                <h4>Booking Details</h4>
-                                <p><strong>Name:</strong> ${booking.CoworkerFullName}</p>
-                                <p><strong>Resource:</strong> ${booking.ResourceName}</p>
-                                <p><strong>Start:</strong> ${fromTime.toLocaleString()}</p>
-                                <p><strong>End:</strong> ${toTime.toLocaleString()}</p>
-                            </div>
-                        `);
-                    } else {
-                        $('#bookingCard').html(`<div class="card white-card"><h3>No current booking</h3></div>`);
-                    }
+                    let active = (now >= early && now <= late);
+                    let cardClass = active ? 'green-card' : 'white-card';
+                    let heading = active ? 'Garden & Café Pass Active' : 'No Current Booking';
+
+                    $('#bookingCard').html(`
+                        <div class="card ${cardClass}">
+                            <h3>${heading}</h3>
+                            <h4>Booking Details</h4>
+                            <p><strong>Name:</strong> ${booking.CoworkerFullName}</p>
+                            <p><strong>Resource:</strong> ${booking.ResourceName}</p>
+                            <p><strong>Start:</strong> ${fromTime.toLocaleString()}</p>
+                            <p><strong>End:</strong> ${toTime.toLocaleString()}</p>
+                        </div>
+                    `);
                 })
                 .catch(err => {
                     console.error(err);
