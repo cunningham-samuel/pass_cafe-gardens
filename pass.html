@@ -6,16 +6,17 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    .active-pass { border: 2px solid green; background-color: #e0ffe0; padding: 16px; border-radius: 8px; }
-    .inactive-pass { border: 2px solid #ccc; background-color: #f9f9f9; padding: 16px; border-radius: 8px; }
+    .card { border: 1px solid #ccc; padding: 16px; border-radius: 8px; margin-top: 20px; }
+    .active { background-color: #c8e6c9; border-color: #2e7d32; color: #2e7d32; }
+    .inactive { background-color: #f5f5f5; border-color: #ccc; color: #333; }
   </style>
 </head>
 <body>
-  <h1>My Booking</h1>
+  <h1>My Pass</h1>
   <div id="bookingCard">Loading your pass...</div>
 
   <script>
-    $(function () {
+    $(async function () {
         function getParameterByName(name) {
             const url = window.location.href;
             name = name.replace(/[\[\]]/g, "\\$&");
@@ -32,7 +33,6 @@
             return;
         }
 
-        // Generate hash exactly as server expects
         async function generateHash(userid, secret) {
             const encoder = new TextEncoder();
             const key = await crypto.subtle.importKey(
@@ -42,65 +42,59 @@
                 false,
                 ["sign"]
             );
-            const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(userid.trim()));
+            const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(String(userid).trim()));
             return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        const sharedSecret = "XxEKJ0_e86072gnm!28fDMtXjEf2w3NM"; // ⚠️ replace with your secret
+        // Use your shared secret here (must match backend!)
+        const sharedSecret = "XxEKJ0_e86072gnm!28fDMtXjEf2w3NM";
 
-        generateHash(customerId, sharedSecret).then(hash => {
-            fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        $('#bookingCard').html("Error: " + data.error);
-                        return;
-                    }
+        const hash = await generateHash(customerId, sharedSecret);
 
-                    if (data.bookings.length === 0) {
-                        $('#bookingCard').html("No current booking.");
-                        return;
-                    }
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    $('#bookingCard').html("Error: " + data.error);
+                    return;
+                }
 
-                    const now = new Date();
-                    const graceMs = 15 * 60 * 1000; // 15 min grace
-                    let activeBooking = null;
+                if (data.bookings.length === 0) {
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No current booking</h3></div>`);
+                    return;
+                }
 
-                    for (const booking of data.bookings) {
-                        const start = new Date(booking.FromTime);
-                        const end = new Date(booking.ToTime);
-                        if (now >= new Date(start.getTime() - graceMs) && now <= new Date(end.getTime() + graceMs)) {
-                            activeBooking = booking;
-                            break;
-                        }
-                    }
-
-                    if (activeBooking) {
-                        $('#bookingCard').html(`
-                            <div class="active-pass">
-                                <h2>Garden & Café Pass Active</h2>
-                                <h4>Booking Details</h4>
-                                <p><strong>Name:</strong> ${activeBooking.CoworkerFullName}</p>
-                                <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
-                                <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
-                                <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
-                            </div>
-                        `);
-                    } else {
-                        $('#bookingCard').html(`
-                            <div class="inactive-pass">
-                                <h2>No current booking</h2>
-                            </div>
-                        `);
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    $('#bookingCard').html("Error loading bookings.");
+                // Loop over returned bookings to find if any are "active"
+                const now = new Date();
+                const marginMinutes = 15;
+                const activeBooking = data.bookings.find(booking => {
+                    const start = new Date(booking.FromTime);
+                    const end = new Date(booking.ToTime);
+                    const startMargin = new Date(start.getTime() - marginMinutes * 60000);
+                    const endMargin = new Date(end.getTime() + marginMinutes * 60000);
+                    return now >= startMargin && now <= endMargin;
                 });
-        });
+
+                if (activeBooking) {
+                    $('#bookingCard').html(`
+                        <div class="card active">
+                            <h3>Garden & café pass active</h3>
+                            <h4>Booking Details:</h4>
+                            <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
+                            <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
+                            <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
+                            <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
+                        </div>
+                    `);
+                } else {
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No current booking</h3></div>`);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                $('#bookingCard').html("Error loading bookings.");
+            });
     });
   </script>
 </body>
 </html>
-
