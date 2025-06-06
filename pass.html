@@ -47,7 +47,7 @@
         }
 
         // IMPORTANT: Replace with your actual shared secret
-        const sharedSecret = "YOUR_SHARED_SECRET_HERE";
+        const sharedSecret = "XxEKJ0_e86072gnm!28fDMtXjEf2w3NM";
 
         generateHash(customerId, sharedSecret).then(hash => {
             fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
@@ -82,3 +82,4 @@
   </script>
 </body>
 </html>
+
