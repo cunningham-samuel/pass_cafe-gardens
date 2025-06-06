@@ -26,12 +26,19 @@
         }
 
         const customerId = getParameterByName('userid');
-        const hash = getParameterByName('hash');
+const hash = getParameterByName('hash');
 
-        if (!customerId || !hash) {
-            $('#bookingCard').html("Missing parameters.");
-            return;
-        }
+// Added logging
+console.log("Page loaded");
+console.log("Full URL:", window.location.href);
+console.log("Extracted customerId:", customerId);
+console.log("Extracted hash:", hash);
+
+if (!customerId || !hash) {
+    $('#bookingCard').html("Missing parameters.");
+    return;
+}
+
 
         // Call Render backend API
         fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
