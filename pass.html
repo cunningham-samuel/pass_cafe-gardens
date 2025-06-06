@@ -26,22 +26,18 @@
         }
 
         const customerId = getParameterByName('userid');
-const hash = getParameterByName('hash');
 
-// Added logging
-console.log("Page loaded");
-console.log("Full URL:", window.location.href);
-console.log("Extracted customerId:", customerId);
-console.log("Extracted hash:", hash);
+        // Debug output directly on page:
+        $('#bookingCard').html(`CustomerId: ${customerId}`);
 
-if (!customerId || !hash) {
-    $('#bookingCard').html("Missing parameters.");
-    return;
-}
-
+        // Stop here if customerId is missing:
+        if (!customerId) {
+            $('#bookingCard').append("<br>Missing userid parameter.");
+            return;
+        }
 
         // Call Render backend API
-        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -58,7 +54,7 @@ if (!customerId || !hash) {
                 $('#bookingCard').html(`
                     <div class="card">
                         <h3>Your Current Booking</h3>
-                        <p><strong>Resource:</strong> ${booking.Resource.Name}</p>
+                        <p><strong>Resource:</strong> ${booking.ResourceName}</p>
                         <p><strong>Start:</strong> ${new Date(booking.FromTime).toLocaleString()}</p>
                         <p><strong>End:</strong> ${new Date(booking.ToTime).toLocaleString()}</p>
                     </div>
@@ -72,3 +68,4 @@ if (!customerId || !hash) {
   </script>
 </body>
 </html>
+
