@@ -2,39 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Garden & Café Pass</title>
+  <title>Member Booking Pass</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      padding: 20px; 
-      background-color: #f9f9f9;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .card { 
-      border: 1px solid #ccc; 
-      padding: 20px; 
-      border-radius: 12px; 
-      max-width: 350px; 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-      text-align: center;
-    }
-    .active { background-color: #d4edda; border-color: #c3e6cb; }
-    .inactive { background-color: #ffffff; border-color: #ccc; }
-    .title { font-size: 22px; margin-bottom: 16px; }
-    .subtitle { font-size: 18px; margin-bottom: 12px; color: #555; }
-    p { margin: 6px 0; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .card { border: 1px solid #ccc; padding: 16px; border-radius: 8px; }
+    .green-card { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+    .white-card { background-color: #ffffff; border-color: #ccc; color: #333; }
   </style>
 </head>
 <body>
-  <div id="bookingCard">Loading your pass...</div>
+  <h1>Loading your pass...</h1>
+  <div id="bookingCard">Please wait...</div>
 
   <script>
+    async function generateSignature(customerId) {
+        const cleanUserId = customerId.trim();
+        const urlToSign = `/api/get-bookings?userid=${cleanUserId}`;
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode('XxEKJ0_e86072gnm!28fDMtXjEf2w3NM');  // <-- Replace with your actual secret
+        const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+        const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(urlToSign));
+        const hashArray = Array.from(new Uint8Array(signature));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     $(async function () {
         function getParameterByName(name) {
             const url = window.location.href;
@@ -47,74 +39,61 @@
         }
 
         const customerId = getParameterByName('userid');
+
         if (!customerId) {
             $('#bookingCard').html("Missing userid parameter.");
             return;
         }
 
-        // Clean URL after reading parameters
-        if (history.replaceState) {
-            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
+        let signature;
+        try {
+            signature = await generateSignature(customerId);
+        } catch (err) {
+            console.error("Signature generation error:", err);
+            $('#bookingCard').html("Error generating secure request.");
+            return;
         }
 
-        // Generate hash
-        const sharedSecret = 'XxEKJ0_e86072gnm!28fDMtXjEf2w3NM'; // <- Replace with your actual shared secret
-        const urlToSign = `/api/get-bookings?userid=${customerId}`;
-        const encoder = new TextEncoder();
-        const key = await crypto.subtle.importKey(
-            "raw",
-            encoder.encode(sharedSecret),
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["sign"]
-        );
-        const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(urlToSign));
-        const hashArray = Array.from(new Uint8Array(signature));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-
-        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hashHex}`)
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${signature}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    $('#bookingCard').html(`<div class="card inactive"><div class="title">Error</div><p>${data.error}</p></div>`);
+                    $('#bookingCard').html("Error: " + data.error);
+                    return;
+                }
+
+                if (!data.bookings || data.bookings.length === 0) {
+                    $('#bookingCard').html(`<div class="card white-card"><h3>No current booking</h3></div>`);
                     return;
                 }
 
                 const now = new Date();
-                const fifteenMinutes = 15 * 60 * 1000;
-                let activeBooking = null;
+                const booking = data.bookings[0];
+                const fromTime = new Date(booking.FromTime);
+                const toTime = new Date(booking.ToTime);
 
-                data.bookings.forEach(booking => {
-                    const start = new Date(booking.FromTime).getTime() - fifteenMinutes;
-                    const end = new Date(booking.ToTime).getTime() + fifteenMinutes;
-                    if (now.getTime() >= start && now.getTime() <= end) {
-                        activeBooking = booking;
-                    }
-                });
+                // Add 15 min buffer before and after
+                const early = new Date(fromTime.getTime() - 15 * 60000);
+                const late = new Date(toTime.getTime() + 15 * 60000);
 
-                if (activeBooking) {
+                if (now >= early && now <= late) {
                     $('#bookingCard').html(`
-                        <div class="card active">
-                            <div class="title">Garden & Café Pass Active</div>
-                            <div class="subtitle">Booking Details</div>
-                            <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || "Unknown"}</p>
-                            <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
-                            <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
-                            <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
+                        <div class="card green-card">
+                            <h3>Garden & Café Pass Active</h3>
+                            <h4>Booking Details</h4>
+                            <p><strong>Name:</strong> ${booking.CoworkerFullName}</p>
+                            <p><strong>Resource:</strong> ${booking.ResourceName}</p>
+                            <p><strong>Start:</strong> ${fromTime.toLocaleString()}</p>
+                            <p><strong>End:</strong> ${toTime.toLocaleString()}</p>
                         </div>
                     `);
                 } else {
-                    $('#bookingCard').html(`
-                        <div class="card inactive">
-                            <div class="title">No Current Booking</div>
-                        </div>
-                    `);
+                    $('#bookingCard').html(`<div class="card white-card"><h3>No current booking</h3></div>`);
                 }
             })
             .catch(err => {
                 console.error(err);
-                $('#bookingCard').html(`<div class="card inactive"><div class="title">Error loading pass.</div></div>`);
+                $('#bookingCard').html("Error loading bookings.");
             });
     });
   </script>
