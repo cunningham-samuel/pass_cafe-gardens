@@ -24,23 +24,10 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
       text-align: center;
     }
-    .active { 
-      background-color: ##4F615C; 
-      border-color: #c3e6cb; 
-    }
-    .inactive { 
-      background-color: #ffffff; 
-      border-color: #ccc; 
-    }
-    .title { 
-      font-size: 22px; 
-      margin-bottom: 16px; 
-    }
-    .subtitle { 
-      font-size: 18px; 
-      margin-bottom: 12px; 
-      color: #555;
-    }
+    .active { background-color: #d4edda; border-color: #c3e6cb; }
+    .inactive { background-color: #ffffff; border-color: #ccc; }
+    .title { font-size: 22px; margin-bottom: 16px; }
+    .subtitle { font-size: 18px; margin-bottom: 12px; color: #555; }
     p { margin: 6px 0; }
   </style>
 </head>
@@ -48,7 +35,7 @@
   <div id="bookingCard">Loading your pass...</div>
 
   <script>
-    $(function () {
+    $(async function () {
         function getParameterByName(name) {
             const url = window.location.href;
             name = name.replace(/[\[\]]/g, "\\$&");
@@ -60,20 +47,33 @@
         }
 
         const customerId = getParameterByName('userid');
-        const hash = getParameterByName('hash');
-
-        if (!customerId || !hash) {
-            $('#bookingCard').html("Missing parameters.");
+        if (!customerId) {
+            $('#bookingCard').html("Missing userid parameter.");
             return;
         }
 
-        // Clean URL after params read (security + tidy)
+        // Clean URL after reading parameters
         if (history.replaceState) {
             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
             window.history.replaceState({}, document.title, cleanUrl);
         }
 
-        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
+        // Generate hash
+        const sharedSecret = 'YOUR_SHARED_SECRET'; // <- Replace with your actual shared secret
+        const urlToSign = `/api/get-bookings?userid=${customerId}`;
+        const encoder = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+            "raw",
+            encoder.encode(sharedSecret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"]
+        );
+        const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(urlToSign));
+        const hashArray = Array.from(new Uint8Array(signature));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hashHex}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
