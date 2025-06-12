@@ -9,6 +9,7 @@
     .card { border: 1px solid #ccc; padding: 16px; border-radius: 8px; margin-top: 20px; }
     .active { background-color: #c8e6c9; border-color: #2e7d32; color: #2e7d32; }
     .inactive { background-color: #f5f5f5; border-color: #ccc; color: #333; }
+    .dedicated { background-color: #bbdefb; border-color: #1565c0; color: #1565c0; }
   </style>
 </head>
 <body>
@@ -59,12 +60,23 @@
                     return;
                 }
 
-                if (data.bookings.length === 0) {
+                // ✅ NEW LOGIC: check for dedicated desk first
+                if (data.dedicatedMember) {
+                    $('#bookingCard').html(`
+                        <div class="card dedicated">
+                            <h3>Dedicated desk member</h3>
+                            <p>Enjoy your space!</p>
+                        </div>
+                    `);
+                    return;
+                }
+
+                // Normal booking logic continues
+                if (!data.bookings || data.bookings.length === 0) {
                     $('#bookingCard').html(`<div class="card inactive"><h3>No current booking</h3></div>`);
                     return;
                 }
 
-                // Loop over returned bookings to find if any are "active"
                 const now = new Date();
                 const marginMinutes = 15;
                 const activeBooking = data.bookings.find(booking => {
@@ -98,3 +110,4 @@
   </script>
 </body>
 </html>
+
