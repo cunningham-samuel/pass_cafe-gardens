@@ -104,7 +104,7 @@
         const sharedSecret = "XxEKJ0_e86072gnm!28fDMtXjEf2w3NM";
         const hash = await generateHash(customerId, sharedSecret);
 
-        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
+        fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}&t=${Date.now()}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
