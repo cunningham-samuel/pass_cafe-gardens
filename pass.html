@@ -5,16 +5,88 @@
   <title>Member Booking Pass</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .card { border: 1px solid #ccc; padding: 16px; border-radius: 8px; margin-top: 20px; }
-    .active { background-color: #c8e6c9; border-color: #2e7d32; color: #2e7d32; }
-    .inactive { background-color: #f5f5f5; border-color: #ccc; color: #333; }
-    .dedicated { background-color: #bbdefb; border-color: #1565c0; color: #1565c0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .card {
+      width: 90%;
+      max-width: 400px;
+      height: 90%;
+      border: 2px solid #ccc;
+      border-radius: 20px;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .active {
+      background-color: #4F615C;
+      color: white;
+    }
+
+    .inactive {
+      background-color: #ffffff;
+      color: #333;
+    }
+
+    .dedicated {
+      background-color: #4F615C;
+      color: white;
+    }
+
+    .card h3 {
+      font-size: 2rem;
+      margin: 0;
+      text-transform: capitalize;
+      flex: 0 0 auto;
+    }
+
+    .details {
+      font-size: 1.5rem;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .details p {
+      margin: 10px 0;
+    }
+
+    .image {
+      flex: 0 0 auto;
+      margin-top: 20px;
+    }
+
+    .image img {
+      max-width: 100%;
+      border-radius: 12px;
+    }
   </style>
 </head>
 <body>
-  <h1>My Pass</h1>
-  <div id="bookingCard">Loading your pass...</div>
+  <div class="container">
+    <div id="bookingCard">
+      <div class="card inactive">
+        <h3>Loading Your Pass...</h3>
+      </div>
+    </div>
+  </div>
 
   <script>
     $(async function () {
@@ -30,7 +102,7 @@
 
         const customerId = getParameterByName('userid');
         if (!customerId) {
-            $('#bookingCard').html("Missing userid parameter.");
+            $('#bookingCard').html(`<div class="card inactive"><h3>Missing Userid Parameter</h3></div>`);
             return;
         }
 
@@ -47,33 +119,29 @@
             return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Use your shared secret here (must match backend!)
         const sharedSecret = "XxEKJ0_e86072gnm!28fDMtXjEf2w3NM";
-
         const hash = await generateHash(customerId, sharedSecret);
 
         fetch(`https://pass-cafe-gardens-backend-final.onrender.com/api/get-bookings?userid=${customerId}&hash=${hash}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    $('#bookingCard').html("Error: " + data.error);
+                    $('#bookingCard').html(`<div class="card inactive"><h3>Error: ${data.error}</h3></div>`);
                     return;
                 }
 
-                // ✅ NEW LOGIC: check for dedicated desk first
                 if (data.dedicatedMember) {
                     $('#bookingCard').html(`
                         <div class="card dedicated">
-                            <h3>Dedicated desk member</h3>
-                            <p>Enjoy your space!</p>
+                            <h3>Dedicated Desk Member</h3>
+                            <div class="image"><img src="assets/images/coffee-in-plants.jpeg" alt="Coffee Image"></div>
                         </div>
                     `);
                     return;
                 }
 
-                // Normal booking logic continues
                 if (!data.bookings || data.bookings.length === 0) {
-                    $('#bookingCard').html(`<div class="card inactive"><h3>No current booking</h3></div>`);
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No Current Booking</h3></div>`);
                     return;
                 }
 
@@ -90,24 +158,27 @@
                 if (activeBooking) {
                     $('#bookingCard').html(`
                         <div class="card active">
-                            <h3>Garden & café pass active</h3>
-                            <h4>Booking Details:</h4>
-                            <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
-                            <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
-                            <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
-                            <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
+                            <h3>Garden & Café Pass Active</h3>
+                            <div class="details">
+                                <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
+                                <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
+                                <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
+                                <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
+                            </div>
+                            <div class="image"><img src="assets/images/coffee-in-plants.jpeg" alt="Coffee Image"></div>
                         </div>
                     `);
                 } else {
-                    $('#bookingCard').html(`<div class="card inactive"><h3>No current booking</h3></div>`);
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No Current Booking</h3></div>`);
                 }
             })
             .catch(err => {
                 console.error(err);
-                $('#bookingCard').html("Error loading bookings.");
+                $('#bookingCard').html(`<div class="card inactive"><h3>Error Loading Pass</h3></div>`);
             });
     });
   </script>
 </body>
 </html>
+
 
