@@ -9,53 +9,56 @@
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      background-color: #f5f5f5;
+    }
+    .container {
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     .card {
-      max-width: 90vw;
-      width: 400px;
-      aspect-ratio: 3/5;  /* maintain nice portrait ratio */
+      border: 1px solid #ccc;
       border-radius: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      padding: 20px;
+      width: 90vw;
+      max-width: 400px;
+      box-sizing: border-box;
       text-align: center;
     }
     .active {
       background-color: #4F615C;
-      color: white;
+      border-color: #4F615C;
+      color: #fff;
     }
     .inactive {
-      background-color: #f5f5f5;
+      background-color: #fff;
+      border-color: #ccc;
       color: #333;
     }
-    .card h1 {
+    h3 {
       font-size: 6vw;
-      margin: 20px 10px 0 10px;
+      margin: 10px 0;
     }
-    .details {
+    h4 {
       font-size: 4vw;
-      padding: 10px;
-      flex: 1;
+      margin: 15px 0 10px 0;
     }
-    .card img {
+    p {
+      font-size: 4vw;
+      margin: 8px 0;
+    }
+    img {
       width: 100%;
-      height: auto;
-      object-fit: cover;
-    }
-    @media (min-width: 600px) {
-      .card h1 { font-size: 32px; }
-      .details { font-size: 20px; }
+      border-radius: 15px;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <div id="bookingCard">Loading your pass...</div>
+  <div class="container">
+    <div id="bookingCard">Loading your pass...</div>
+  </div>
 
   <script>
     $(async function () {
@@ -67,6 +70,16 @@
             if (!results) return null;
             if (!results[2]) return '';
             return decodeURIComponent(results[2].replace(/\+/g, " "));
+        }
+
+        function formatDateTime(datetimeString) {
+            const date = new Date(datetimeString);
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${day}/${month}/${year}, ${hours}:${minutes}`;
         }
 
         const customerId = getParameterByName('userid');
@@ -99,19 +112,19 @@
                     return;
                 }
 
+                // Handle dedicated desk case
                 if (data.dedicatedDesk) {
                     $('#bookingCard').html(`
                         <div class="card active">
-                            <h1>Dedicated Desk Member</h1>
-                            <div class="details"></div>
-                            <img src="assets/images/coffee-in-plants.jpeg" alt="Pass Image">
+                            <h3>Dedicated Desk Member</h3>
+                            <img src="assets/images/coffee-in-plants.jpeg" alt="Coffee Image">
                         </div>
                     `);
                     return;
                 }
 
                 if (data.bookings.length === 0) {
-                    $('#bookingCard').html(`<div class="card inactive"><h1>No Current Booking</h1></div>`);
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No Current Booking</h3></div>`);
                     return;
                 }
 
@@ -128,18 +141,17 @@
                 if (activeBooking) {
                     $('#bookingCard').html(`
                         <div class="card active">
-                            <h1>Garden & Café Pass Active</h1>
-                            <div class="details">
-                                <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
-                                <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
-                                <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
-                                <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
-                            </div>
-                            <img src="assets/images/coffee-in-plants.jpeg" alt="Pass Image">
+                            <h3>Garden & Café Pass Active</h3>
+                            <h4>Booking Details:</h4>
+                            <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
+                            <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
+                            <p><strong>Start:</strong> ${formatDateTime(activeBooking.FromTime)}</p>
+                            <p><strong>End:</strong> ${formatDateTime(activeBooking.ToTime)}</p>
+                            <img src="assets/images/coffee-in-plants.jpeg" alt="Coffee Image">
                         </div>
                     `);
                 } else {
-                    $('#bookingCard').html(`<div class="card inactive"><h1>No Current Booking</h1></div>`);
+                    $('#bookingCard').html(`<div class="card inactive"><h3>No Current Booking</h3></div>`);
                 }
             })
             .catch(err => {
@@ -150,3 +162,4 @@
   </script>
 </body>
 </html>
+
