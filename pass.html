@@ -6,17 +6,26 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     html, body {
-      height: 100%;
       margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
       font-family: Arial, sans-serif;
       background-color: #f0f0f0;
       display: flex;
       justify-content: center;
       align-items: center;
     }
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     .card {
-      width: 90vw;
-      height: 90vh;
+      width: 95%;
+      height: 95%;
       border-radius: 20px;
       display: flex;
       flex-direction: column;
@@ -24,33 +33,36 @@
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       text-align: center;
+      padding: 20px;
     }
     .active {
       background-color: #4F615C;
-      color: white;
+      color: #fff;
     }
     .inactive {
       background-color: #f5f5f5;
       color: #333;
     }
-    .card h1 {
-      font-size: 6vw;
-      margin: 20px 10px 0 10px;
+    h1 {
+      font-size: 2.5em;
+      margin: 0.5em 0;
     }
-    .card .details {
-      font-size: 4vw;
-      padding: 10px;
-      flex: 1;
+    h3, h4, p {
+      margin: 0.5em 0;
+      font-size: 1.5em;
     }
-    .card img {
+    .booking-image {
       width: 100%;
       height: auto;
-      object-fit: cover;
+      border-radius: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div id="bookingCard">Loading your pass...</div>
+  <div class="container">
+    <div id="bookingCard"><h1>Loading Your Pass...</h1></div>
+  </div>
 
   <script>
     $(async function () {
@@ -66,7 +78,7 @@
 
         const customerId = getParameterByName('userid');
         if (!customerId) {
-            $('#bookingCard').html("Missing userid parameter.");
+            $('#bookingCard').html("<h1>Missing UserId Parameter</h1>");
             return;
         }
 
@@ -90,7 +102,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    $('#bookingCard').html("Error: " + data.error);
+                    $('#bookingCard').html(`<h1>Error: ${data.error}</h1>`);
                     return;
                 }
 
@@ -98,8 +110,7 @@
                     $('#bookingCard').html(`
                         <div class="card active">
                             <h1>Dedicated Desk Member</h1>
-                            <div class="details"></div>
-                            <img src="assets/images/coffee-in-plants.jpeg" alt="Pass Image">
+                            <img src="assets/images/coffee-in-plants.jpeg" class="booking-image" alt="Coffee Image">
                         </div>
                     `);
                     return;
@@ -124,13 +135,11 @@
                     $('#bookingCard').html(`
                         <div class="card active">
                             <h1>Garden & Café Pass Active</h1>
-                            <div class="details">
-                                <p><strong>Name:</strong> ${activeBooking.CoworkerFullName || 'N/A'}</p>
-                                <p><strong>Resource:</strong> ${activeBooking.ResourceName}</p>
-                                <p><strong>Start:</strong> ${new Date(activeBooking.FromTime).toLocaleString()}</p>
-                                <p><strong>End:</strong> ${new Date(activeBooking.ToTime).toLocaleString()}</p>
-                            </div>
-                            <img src="assets/images/coffee-in-plants.jpeg" alt="Pass Image">
+                            <h4>Name: ${activeBooking.CoworkerFullName || 'N/A'}</h4>
+                            <h4>Resource: ${activeBooking.ResourceName}</h4>
+                            <h4>Start: ${new Date(activeBooking.FromTime).toLocaleString()}</h4>
+                            <h4>End: ${new Date(activeBooking.ToTime).toLocaleString()}</h4>
+                            <img src="assets/images/coffee-in-plants.jpeg" class="booking-image" alt="Coffee Image">
                         </div>
                     `);
                 } else {
@@ -139,7 +148,7 @@
             })
             .catch(err => {
                 console.error(err);
-                $('#bookingCard').html("Error loading bookings.");
+                $('#bookingCard').html("<h1>Error Loading Bookings</h1>");
             });
     });
   </script>
