@@ -1,69 +1,51 @@
-// /functions/api/get-bookings.js
-// Replaces your Render backend. Runs on Cloudflare's Workers runtime.
-
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
     const userid = url.searchParams.get('userid');
+    const debug = url.searchParams.get('debug') === '1';
 
-    // 1) Basic input checks
     if (!userid || !/^\d+$/.test(userid)) {
       return json({ error: 'Missing or invalid userid' }, 400);
     }
 
-    // 2) (Optional but recommended) verify Nexudus-signed custom page request.
-    // Nexudus can append an HMAC-SHA256 signature to custom-page URLs using your shared secret.
-    // We accept ?h=<hex> or ?signature=<hex>. If present, we validate it.
-    const sigParam = url.searchParams.has('h')
-      ? 'h'
-      : (url.searchParams.has('signature') ? 'signature' : null);
-
-    if (sigParam && env.NEXUDUS_SHARED_SECRET) {
-      const provided = String(url.searchParams.get(sigParam)).toLowerCase();
-
-      // Recompute HMAC over the FULL URL *without* the signature parameter.
-      const unsigned = new URL(request.url);
-      unsigned.searchParams.delete(sigParam);
-
-      const enc = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw", enc.encode(env.NEXUDUS_SHARED_SECRET),
-        { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-      );
-      const sigBytes = await crypto.subtle.sign("HMAC", key, enc.encode(unsigned.toString()));
-      const expected = [...new Uint8Array(sigBytes)].map(b => b.toString(16).padStart(2, '0')).join('');
-
-      if (expected.toLowerCase() !== provided) {
-        return json({ error: 'Invalid signature' }, 403);
-      }
-    }
-
-    // 3) Call Nexudus (REST API) with Basic auth, like your Node server did.
     const auth = "Basic " + btoa(`${env.NEXUDUS_API_USERNAME}:${env.NEXUDUS_API_PASSWORD}`);
+    const coworkerUrl = `https://spaces.nexudus.com/api/spaces/coworkers?Coworker_User=${encodeURIComponent(userid)}`;
 
-    // 3a) Look up coworker by the Nexudus User Id
-    const coworkerUrl =
-      `https://spaces.nexudus.com/api/spaces/coworkers?Coworker_User=${encodeURIComponent(userid)}`;
+    console.log('[get-bookings] userid=', userid);
+    console.log('[get-bookings] coworkerUrl=', coworkerUrl);
 
     const cwRes = await fetch(coworkerUrl, {
       headers: { Authorization: auth, Accept: "application/json" }
-    }); // Workers use fetch natively. :contentReference[oaicite:3]{index=3}
+    });
 
-    if (!cwRes.ok) return json({ error: 'Coworker lookup failed', status: cwRes.status }, 502);
-    const cwData = await cwRes.json(); // Nexudus search endpoints return { Records: [...] } :contentReference[oaicite:4]{index=4}
-    const coworker = Array.isArray(cwData?.Records) && cwData.Records[0];
-    if (!coworker) return json({ bookings: [] });
+    console.log('[get-bookings] coworker status=', cwRes.status);
 
-    // Dedicated desk check (matches your server.js logic)
-    const tariff = String(coworker.CoworkerContractTariffNames || '');
-    if (tariff.toLowerCase().includes('dedicated')) {
-      return json({ dedicatedDesk: true }); // keep key name consistent with your front end
+    if (!cwRes.ok) {
+      const text = await cwRes.text();
+      console.log('[get-bookings] coworker body=', text.slice(0, 400));
+      return json({ error: 'Coworker lookup failed', status: cwRes.status }, 502);
     }
 
-    // 3b) Get today's bookings for that coworker
+    const cwData = await cwRes.json();
+    const records = Array.isArray(cwData?.Records) ? cwData.Records : [];
+    console.log('[get-bookings] coworker records=', records.length);
+
+    if (debug) {
+      // Temporary: return a peek so we know what the API is sending back
+      return json({ debug: { userid, coworkerStatus: cwRes.status, hasRecords: records.length > 0, sample: records[0] || null } });
+    }
+
+    const coworker = records[0];
+    if (!coworker) return json({ bookings: [], dedicatedDesk: false });
+
+    const tariff = String(coworker.CoworkerContractTariffNames || '');
+    if (tariff.toLowerCase().includes('dedicated')) {
+      return json({ dedicatedDesk: true });
+    }
+
     const now = new Date();
-    const start = new Date(now); start.setUTCHours(0, 0, 0, 0);
-    const end   = new Date(now); end.setUTCHours(23, 59, 59, 999);
+    const start = new Date(now); start.setUTCHours(0,0,0,0);
+    const end   = new Date(now); end.setUTCHours(23,59,59,999);
     const iso = d => d.toISOString().split('.')[0] + 'Z';
 
     const bookingsUrl =
@@ -73,16 +55,26 @@ export async function onRequestGet({ request, env }) {
       `&to_Booking_ToTime=${encodeURIComponent(iso(end))}` +
       `&status=Confirmed`;
 
+    console.log('[get-bookings] bookingsUrl=', bookingsUrl);
+
     const bRes = await fetch(bookingsUrl, {
       headers: { Authorization: auth, Accept: "application/json" }
     });
-    if (!bRes.ok) return json({ error: 'Bookings fetch failed', status: bRes.status }, 502);
+    console.log('[get-bookings] bookings status=', bRes.status);
 
-    const bData = await bRes.json(); // { Records: [...] } for bookings too :contentReference[oaicite:5]{index=5}
+    if (!bRes.ok) {
+      const t = await bRes.text();
+      console.log('[get-bookings] bookings body=', t.slice(0, 400));
+      return json({ error: 'Bookings fetch failed', status: bRes.status }, 502);
+    }
+
+    const bData = await bRes.json();
     const bookings = Array.isArray(bData?.Records) ? bData.Records : [];
+    console.log('[get-bookings] bookings count=', bookings.length);
 
     return json({ bookings, dedicatedDesk: false });
   } catch (err) {
+    console.log('[get-bookings] error', err);
     return json({ error: 'Server error', detail: String(err).slice(0, 400) }, 500);
   }
 }
@@ -93,4 +85,5 @@ function json(obj, status = 200) {
     headers: { "Content-Type": "application/json" }
   });
 }
+
 
