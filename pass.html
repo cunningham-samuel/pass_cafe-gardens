@@ -53,6 +53,11 @@
       border-radius: 15px;
       margin-top: 25px;
     }
+   #currentDateTime {
+     font-size: 3.2vw;
+     margin: 8px 0 0 0;
+     opacity: 0.9;
+    }
   </style>
 </head>
 <body>
@@ -116,9 +121,11 @@
                     $('#bookingCard').html(`
                         <div class="card active">
                             <h3>Dedicated Desk Member</h3>
+                            <p id="currentDateTime"></p>
                             <img src="assets/images/coffee-in-plants.jpeg" alt="Coffee Image">
                         </div>
                     `);
+                    $('#currentDateTime').text(formatDateTime(new Date()));
                     return;
                 }
 
