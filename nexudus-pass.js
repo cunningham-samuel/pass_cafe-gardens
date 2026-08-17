@@ -15,12 +15,12 @@
     }
 
     const wantedUrl =
-      'https://pass-cafe-gardens.pages.dev/pass?userid=' +
+      'https://pass-cafe-gardens.pages.dev/pass?coworkerid=' +
       encodeURIComponent(coworkerId);
 
     if (iframe.src !== wantedUrl) {
       iframe.src = wantedUrl;
-      console.log('Cafe Gardens pass loaded for coworker:', coworkerId);
+      console.log('Cafe Gardens V5 pass loaded for coworker:', coworkerId);
     }
 
     return true;
