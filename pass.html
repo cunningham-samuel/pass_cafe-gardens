@@ -87,9 +87,11 @@
             return `${day}/${month}/${year}, ${hours}:${minutes}`;
         }
 
-        const customerId = getParameterByName('userid');
-        if (!customerId) {
-            $('#bookingCard').html("Missing userid parameter.");
+        const coworkerId = getParameterByName('coworkerid');
+        const userId = getParameterByName('userid');
+
+        if (!coworkerId && !userId) {
+            $('#bookingCard').html("Missing user identifier.");
             return;
         }
 
@@ -106,9 +108,21 @@
             return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-            const qs = window.location.search; // includes ?userid=… and Nexudus parameters
-            const apiUrl = '/api/get-bookings' + (qs ? qs + '&' : '?') + 't=' + Date.now();
-            fetch(apiUrl)
+        let apiUrl;
+
+        if (coworkerId) {
+            apiUrl =
+                '/api/get-bookingsv5?coworkerid=' +
+                encodeURIComponent(coworkerId) +
+                '&t=' + Date.now();
+        } else {
+            apiUrl =
+                '/api/get-bookings?userid=' +
+                encodeURIComponent(userId) +
+                '&t=' + Date.now();
+        }
+
+        fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
