@@ -87,8 +87,61 @@
             return `${day}/${month}/${year}, ${hours}:${minutes}`;
         }
 
+        async function repairLegacyPassportUrl() {
+            $('#bookingCard').html(`
+                <div class="card inactive">
+                    <h3>Refreshing Café Gardens Pass…</h3>
+                    <p>Please wait a moment.</p>
+                </div>
+            `);
+
+            try {
+                const response = await fetch('/api/repair-passport-url?t=' + Date.now(), {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || 'Unable to refresh the pass link');
+                }
+
+                $('#bookingCard').html(`
+                    <div class="card inactive">
+                        <h3>Pass link refreshed</h3>
+                        <p>Please close this page and open Café Gardens Pass again.</p>
+                    </div>
+                `);
+            } catch (err) {
+                console.error('[pass] URL repair failed', err);
+                $('#bookingCard').html(`
+                    <div class="card inactive">
+                        <h3>Pass temporarily unavailable</h3>
+                        <p>Please close this page and try Café Gardens Pass again shortly.</p>
+                    </div>
+                `);
+            }
+        }
+
+        const pageUrl = new URL(window.location.href);
         const coworkerId = getParameterByName('coworkerid');
         const userId = getParameterByName('userid');
+
+        // Legacy Passport occasionally persists a resolved/broken custom-page URL,
+        // leaving userid blank and appending one or more hash parameters. Catch that
+        // before the normal booking request so the user never sees a technical error.
+        const legacyUseridPresent = pageUrl.searchParams.has('userid');
+        const legacyUseridValid = /^\d+$/.test(String(userId || ''));
+        const looksLikeBrokenLegacyUrl =
+            !coworkerId &&
+            ((legacyUseridPresent && !legacyUseridValid) ||
+             (!legacyUseridPresent && pageUrl.searchParams.has('hash')));
+
+        if (looksLikeBrokenLegacyUrl) {
+            await repairLegacyPassportUrl();
+            return;
+        }
 
         if (!coworkerId && !userId) {
             $('#bookingCard').html("Missing user identifier.");
